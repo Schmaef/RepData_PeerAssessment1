@@ -1,25 +1,122 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
+title: 'Reproducible Research: Peer Assessment 1'
+author: "Schmaef"
+date: '2022-07-14'
+output:
   html_document:
-    keep_md: true
+    keep_md: yes
+  word_document: default
+  pdf_document: default
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
 ## Loading and preprocessing the data
 
+The Data is downloaded from my github repo and read into the variable "activity.raw". Also some packages are loaded.
+```{r loading data}
+library(lattice)
+library(ggplot2)
 
+download.file("https://github.com/Schmaef/RepData_PeerAssessment1/blob/master/activity.zip", destfile="activity.zip", method="curl")
+unzip ("activity.zip")
+
+activity.raw <- read.csv("activity.csv", sep =",")
+```
 
 ## What is mean total number of steps taken per day?
 
+To calculate the mean total number of steps, steps and data are aggregated summed up
+```{r date}
+daily.steps <- aggregate(steps ~ date, activity.raw, sum)
+```
 
+A histogramm is created and a few optical variables are changed
+```{r plot}
+hist(daily.steps$steps,
+     main = "total daily steps",
+     xlab = "total steps",
+     breaks=20)
+```
+
+Lastly the mean, median and total are calculated
+```{r mean median total}
+mean(daily.steps$steps)
+
+median(daily.steps$steps)
+
+sum(daily.steps$steps)
+```
 
 ## What is the average daily activity pattern?
 
+To calculate the average daily activity pattern, the steps and interval are aggregated and averaged
+```{r int.steps}
+int.steps <- aggregate(steps ~ interval, activity.raw, mean)
+```
 
+The data is presented in a time series plot
+```{r plot2}
+xyplot(steps ~ interval, int.steps, 
+       type = "l",
+       main = "average daily activity pattern",
+       xlab = "interval", 
+       ylab = "steps")
+```
+
+The interval with the maximum average steps is calculated
+```{r interval}
+int.steps$interval[which.max(int.steps$steps)]
+```
 
 ## Imputing missing values
 
+To impute missing data, blanks are filled with the average steps per interval
+```{r imputing}
+activity.nn <- activity.raw
+activity.nn[is.na(activity.nn$steps), "steps"] = mean(int.steps$steps) 
+```
 
+Repeating the code from the first histogram
+```{r date 2}
+daily.steps.nn <- aggregate(steps ~ date, activity.nn , sum)
+
+hist(daily.steps.nn$steps,
+     main = "total daily steps with imputed data",
+     xlab = "total steps",
+     breaks=20)
+```
+
+Again the mean, median and total are calculated
+```{r mean median}
+mean(daily.steps.nn$steps)
+
+median(daily.steps.nn$steps)
+
+sum(daily.steps.nn$steps)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+To seperate between weekdays and weekend a new factor variable called daytype is created
+
+```{r weekdays}
+activity.nn$day <- as.POSIXlt(activity.nn$date)$wday
+activity.nn$daytype <- as.factor(ifelse(
+  activity.nn$day == 0 | activity.nn$day == 6, "weekend", "weekday"))
+activity.nn <- subset(activity.nn, select = -c(day))
+```
+
+The data is presented in two different plots, one for weekdays and one for weekends,
+as the daytype variable defines. "layout = c(1,2)" is used to get the two plots into one window 
+
+```{r weekdays plot}
+xyplot(steps ~ interval | activity.nn$daytype, int.steps, 
+       type = "l", 
+       layout = c(1,2),
+       main = "average daily activity pattern",
+       xlab = "interval", 
+       ylab = "steps")
+```
